@@ -1,109 +1,193 @@
 {
-  "name": "Máquina de Atwood",
-  "version": "1.0.0",
+  "name": "Máquina de Atwood PRO",
+  "version": "2.0.0",
   "author": "Physics Lab Team",
-  "description": "Simulação realista da Máquina de Atwood com roldana giratória, atrito da corda, inércia e parâmetros ajustáveis",
+  "description": "Simulação completa da Máquina de Atwood com corda contínua conectada às massas e roldana",
   "category": "mechanics",
+
   "objects": [
     {
       "id": "atwood_pulley",
-      "name": "Roldana Atwood",
-      "icon": "settings",
+      "name": "Roldana",
       "type": "shape",
-      "category": "mechanics",
+
       "defaultProps": {
         "x": 550,
         "y": 150,
-        "w": 40,
-        "mass": 2,
+        "radius": 40,
         "momentOfInertia": 0.5,
-        "friction": 0.05,
-        "ropeFriction": 0.02,
-        "fill": "#94a3b8",
-        "stroke": "#475569",
-        "lineWidth": 2,
-        "static": true,
-        "collidable": true,
-        "leftMass": 1,
-        "rightMass": 1,
-        "leftPosition": 300,
-        "rightPosition": 300,
-        "ropeLength": 400,
+        "friction": 0.02,
         "ropeColor": "#64748b",
-        "ropeWidth": 3
+        "ropeWidth": 3,
+        "leftY": 350,
+        "rightY": 350,
+        "velocity": 0,
+        "angularVelocity": 0,
+        "rotation": 0
       },
-      "draw": "function(ctx, obj) {\n  ctx.save();\n  \n  // Desenhar roldana\n  ctx.beginPath();\n  ctx.arc(obj.x, obj.y, obj.w, 0, 2 * Math.PI);\n  ctx.fillStyle = obj.fill;\n  ctx.fill();\n  ctx.strokeStyle = obj.stroke;\n  ctx.lineWidth = obj.lineWidth;\n  ctx.stroke();\n  \n  // Canal da corda\n  ctx.beginPath();\n  ctx.arc(obj.x, obj.y, obj.w - 3, 0, 2 * Math.PI);\n  ctx.fillStyle = '#1e293b';\n  ctx.fill();\n  \n  // Eixo\n  ctx.beginPath();\n  ctx.arc(obj.x, obj.y, obj.w * 0.2, 0, 2 * Math.PI);\n  ctx.fillStyle = '#0f172a';\n  ctx.fill();\n  \n  // Raios para indicar rotação\n  if (obj.rotationAngle) {\n    ctx.save();\n    ctx.translate(obj.x, obj.y);\n    ctx.rotate(obj.rotationAngle);\n    for (let i = 0; i < 4; i++) {\n      const angle = (i * Math.PI * 2) / 4;\n      ctx.beginPath();\n      ctx.moveTo(0, 0);\n      ctx.lineTo(Math.cos(angle) * obj.w * 0.7, Math.sin(angle) * obj.w * 0.7);\n      ctx.strokeStyle = '#fbbf24';\n      ctx.lineWidth = 2;\n      ctx.stroke();\n    }\n    ctx.restore();\n  }\n  \n  // Desenhar corda\n  if (obj.ropeLeftY !== undefined && obj.ropeRightY !== undefined) {\n    // Corda esquerda\n    ctx.beginPath();\n    ctx.moveTo(obj.x - obj.w * 0.8, obj.y + obj.w * 0.3);\n    ctx.lineTo(obj.x - obj.w * 0.5, obj.y + obj.w * 0.5);\n    ctx.lineTo(obj.x - 5, obj.ropeLeftY);\n    ctx.strokeStyle = obj.ropeColor;\n    ctx.lineWidth = obj.ropeWidth;\n    ctx.stroke();\n    \n    // Corda direita\n    ctx.beginPath();\n    ctx.moveTo(obj.x + obj.w * 0.8, obj.y + obj.w * 0.3);\n    ctx.lineTo(obj.x + obj.w * 0.5, obj.y + obj.w * 0.5);\n    ctx.lineTo(obj.x + 5, obj.ropeRightY);\n    ctx.stroke();\n  }\n  \n  ctx.restore();\n}",
-      "update": "function(obj, dt) {\n  if (!obj.leftMassObj || !obj.rightMassObj) return;\n  \n  const m1 = obj.leftMass;\n  const m2 = obj.rightMass;\n  const I = obj.momentOfInertia;\n  const r = obj.w / 100;\n  const g = Lab.state.gravity;\n  const friction = obj.friction;\n  const ropeFriction = obj.ropeFriction;\n  \n  // Calcular aceleração considerando inércia da roldana e atrito\n  const denominator = m1 + m2 + I / (r * r);\n  let a = (m2 - m1) * g / denominator;\n  \n  // Atrito da corda (força oposta ao movimento)\n  if (obj.angularVelocity) {\n    const frictionForce = friction * (m1 + m2) * g;\n    const frictionAcc = frictionForce / denominator;\n    if (a > 0) a = Math.max(0, a - frictionAcc);\n    else if (a < 0) a = Math.min(0, a + frictionAcc);\n  }\n  \n  // Atrito da roldana\n  const angularFriction = obj.angularVelocity * ropeFriction;\n  \n  // Atualizar velocidades\n  obj.velocity = (obj.velocity || 0) + a * dt;\n  obj.velocity *= (1 - friction * dt);\n  \n  // Velocidade angular da roldana\n  obj.angularVelocity = (obj.velocity / r) * dt + (obj.angularVelocity || 0);\n  obj.angularVelocity *= (1 - angularFriction * dt);\n  obj.rotationAngle = (obj.rotationAngle || 0) + obj.angularVelocity * dt * 30;\n  \n  // Atualizar posições das massas\n  obj.leftPosition = (obj.leftPosition || 300) - obj.velocity * dt;\n  obj.rightPosition = (obj.rightPosition || 300) + obj.velocity * dt;\n  \n  // Limites\n  obj.leftPosition = Math.max(50, Math.min(obj.y + 100, obj.leftPosition));\n  obj.rightPosition = Math.max(50, Math.min(obj.y + 100, obj.rightPosition));\n  \n  // Atualizar objetos das massas\n  if (obj.leftMassObj) {\n    obj.leftMassObj.y = obj.leftPosition;\n    obj.leftMassObj.x = obj.x - 80;\n  }\n  if (obj.rightMassObj) {\n    obj.rightMassObj.y = obj.rightPosition;\n    obj.rightMassObj.x = obj.x + 80;\n  }\n  \n  obj.ropeLeftY = obj.leftPosition + 15;\n  obj.ropeRightY = obj.rightPosition + 15;\n}",
-      "properties": [
-        { "name": "leftMass", "label": "Massa Esquerda (kg)", "type": "number", "default": 1, "min": 0.1, "max": 10, "step": 0.1 },
-        { "name": "rightMass", "label": "Massa Direita (kg)", "type": "number", "default": 1, "min": 0.1, "max": 10, "step": 0.1 },
-        { "name": "momentOfInertia", "label": "Inércia da Roldana", "type": "range", "default": 0.5, "min": 0.1, "max": 2, "step": 0.05 },
-        { "name": "friction", "label": "Atrito da Corda", "type": "range", "default": 0.05, "min": 0, "max": 0.3, "step": 0.01 },
-        { "name": "ropeFriction", "label": "Atrito da Roldana", "type": "range", "default": 0.02, "min": 0, "max": 0.2, "step": 0.01 },
-        { "name": "w", "label": "Raio da Roldana (px)", "type": "number", "default": 40, "min": 20, "max": 80, "step": 2 }
-      ]
+
+      "draw": "function(ctx, obj) {\n\
+        ctx.save();\n\
+\n\
+        const r = obj.radius;\n\
+\n\
+        // === ROLDANA ===\n\
+        ctx.beginPath();\n\
+        ctx.arc(obj.x, obj.y, r, 0, Math.PI * 2);\n\
+        ctx.fillStyle = '#94a3b8';\n\
+        ctx.fill();\n\
+        ctx.strokeStyle = '#475569';\n\
+        ctx.lineWidth = 2;\n\
+        ctx.stroke();\n\
+\n\
+        // eixo\n\
+        ctx.beginPath();\n\
+        ctx.arc(obj.x, obj.y, r * 0.2, 0, Math.PI * 2);\n\
+        ctx.fillStyle = '#0f172a';\n\
+        ctx.fill();\n\
+\n\
+        // === CORDA CONTÍNUA ===\n\
+        const leftX = obj.x - r;\n\
+        const rightX = obj.x + r;\n\
+\n\
+        ctx.beginPath();\n\
+\n\
+        // lado esquerdo (vertical)\n\
+        ctx.moveTo(leftX, obj.y);\n\
+        ctx.lineTo(leftX, obj.leftY);\n\
+\n\
+        // conexão com massa esquerda\n\
+        if (obj.leftMassObj) {\n\
+          ctx.lineTo(obj.leftMassObj.x, obj.leftMassObj.y - obj.leftMassObj.w);\n\
+        }\n\
+\n\
+        // voltar para roldana\n\
+        ctx.moveTo(rightX, obj.y);\n\
+\n\
+        // lado direito (vertical)\n\
+        ctx.lineTo(rightX, obj.rightY);\n\
+\n\
+        // conexão massa direita\n\
+        if (obj.rightMassObj) {\n\
+          ctx.lineTo(obj.rightMassObj.x, obj.rightMassObj.y - obj.rightMassObj.w);\n\
+        }\n\
+\n\
+        ctx.strokeStyle = obj.ropeColor;\n\
+        ctx.lineWidth = obj.ropeWidth;\n\
+        ctx.stroke();\n\
+\n\
+        ctx.restore();\n\
+      }",
+
+      "update": "function(obj, dt) {\n\
+        if (!obj.leftMassObj || !obj.rightMassObj) return;\n\
+\n\
+        const m1 = obj.leftMassObj.mass;\n\
+        const m2 = obj.rightMassObj.mass;\n\
+        const g = Lab.state.gravity;\n\
+        const r = obj.radius / 100;\n\
+        const I = obj.momentOfInertia;\n\
+\n\
+        // === ACELERAÇÃO ===\n\
+        const a = (m2 - m1) * g / (m1 + m2 + I/(r*r));\n\
+\n\
+        // === VELOCIDADE ===\n\
+        obj.velocity += a * dt;\n\
+        obj.velocity *= (1 - obj.friction);\n\
+\n\
+        // === POSIÇÕES ===\n\
+        obj.leftY -= obj.velocity;\n\
+        obj.rightY += obj.velocity;\n\
+\n\
+        // limites simples\n\
+        obj.leftY = Math.max(100, Math.min(500, obj.leftY));\n\
+        obj.rightY = Math.max(100, Math.min(500, obj.rightY));\n\
+\n\
+        // === ATUALIZAR MASSAS ===\n\
+        obj.leftMassObj.x = obj.x - obj.radius;\n\
+        obj.rightMassObj.x = obj.x + obj.radius;\n\
+\n\
+        obj.leftMassObj.y = obj.leftY;\n\
+        obj.rightMassObj.y = obj.rightY;\n\
+\n\
+        // === ROTAÇÃO ===\n\
+        obj.angularVelocity = obj.velocity / r;\n\
+        obj.rotation += obj.angularVelocity * dt;\n\
+      }"
     },
+
     {
       "id": "atwood_mass",
-      "name": "Massa Atwood",
-      "icon": "circle",
+      "name": "Massa",
       "type": "shape",
-      "category": "mechanics",
+
       "defaultProps": {
-        "w": 30,
+        "w": 25,
         "mass": 1,
-        "fill": "#3b82f6",
-        "stroke": "#1d4ed8",
-        "lineWidth": 2,
-        "collidable": true
+        "fill": "#3b82f6"
       },
-      "draw": "function(ctx, obj) {\n  ctx.save();\n  ctx.beginPath();\n  ctx.arc(obj.x, obj.y, obj.w, 0, 2 * Math.PI);\n  ctx.fillStyle = obj.fill;\n  ctx.fill();\n  ctx.strokeStyle = obj.stroke;\n  ctx.lineWidth = obj.lineWidth;\n  ctx.stroke();\n  \n  // Texto da massa\n  ctx.fillStyle = '#ffffff';\n  ctx.font = 'bold 12px monospace';\n  ctx.fillText(`${obj.mass}kg`, obj.x - 15, obj.y + 5);\n  ctx.restore();\n}",
-      "update": "function(obj, dt) {\n  // A física é controlada pela roldana\n}",
-      "properties": [
-        { "name": "mass", "label": "Massa (kg)", "type": "number", "default": 1, "min": 0.1, "max": 10, "step": 0.1 },
-        { "name": "fill", "label": "Cor", "type": "color", "default": "#3b82f6" }
-      ]
+
+      "draw": "function(ctx, obj) {\n\
+        ctx.save();\n\
+\n\
+        ctx.beginPath();\n\
+        ctx.arc(obj.x, obj.y, obj.w, 0, Math.PI * 2);\n\
+        ctx.fillStyle = obj.fill;\n\
+        ctx.fill();\n\
+\n\
+        // gancho (onde a corda prende)\n\
+        ctx.beginPath();\n\
+        ctx.moveTo(obj.x, obj.y - obj.w);\n\
+        ctx.lineTo(obj.x, obj.y - obj.w - 10);\n\
+        ctx.strokeStyle = '#000';\n\
+        ctx.stroke();\n\
+\n\
+        ctx.fillStyle = '#fff';\n\
+        ctx.font = '10px monospace';\n\
+        ctx.fillText(obj.mass + 'kg', obj.x - 12, obj.y + 3);\n\
+\n\
+        ctx.restore();\n\
+      }"
     }
   ],
+
   "tools": [
     {
-      "id": "create_atwood_machine",
-      "name": "Criar Máquina Atwood",
-      "icon": "science",
-      "category": "mechanics",
-      "action": "function() {\n  const centerX = Lab.state.W / 2;\n  const pulleyY = 150;\n  const massY = 350;\n  \n  // Criar roldana\n  const pulley = Lab.objects.add({\n    type: 'rect',\n    pluginId: 'atwood_pulley',\n    x: centerX - 20,\n    y: pulleyY - 20,\n    w: 40,\n    h: 40,\n    mass: 2,\n    momentOfInertia: 0.5,\n    friction: 0.05,\n    ropeFriction: 0.02,\n    fill: '#94a3b8',\n    stroke: '#475569',\n    lineWidth: 2,\n    static: true,\n    leftMass: 1,\n    rightMass: 1,\n    leftPosition: massY,\n    rightPosition: massY,\n    ropeLength: 400,\n    ropeColor: '#64748b',\n    ropeWidth: 3,\n    velocity: 0,\n    angularVelocity: 0,\n    rotationAngle: 0\n  });\n  \n  // Criar massa esquerda\n  const leftMass = Lab.objects.add({\n    type: 'circle',\n    pluginId: 'atwood_mass',\n    x: centerX - 80,\n    y: massY,\n    w: 30,\n    mass: 1,\n    fill: '#3b82f6',\n    stroke: '#1d4ed8',\n    lineWidth: 2,\n    collidable: true\n  });\n  \n  // Criar massa direita\n  const rightMass = Lab.objects.add({\n    type: 'circle',\n    pluginId: 'atwood_mass',\n    x: centerX + 80,\n    y: massY,\n    w: 30,\n    mass: 1,\n    fill: '#ef4444',\n    stroke: '#dc2626',\n    lineWidth: 2,\n    collidable: true\n  });\n  \n  // Conectar objetos à roldana\n  const pulleyObj = Lab.objects.get(pulley);\n  pulleyObj.leftMassObj = Lab.objects.get(leftMass);\n  pulleyObj.rightMassObj = Lab.objects.get(rightMass);\n  pulleyObj.leftMass = 1;\n  pulleyObj.rightMass = 1;\n  pulleyObj.leftPosition = massY;\n  pulleyObj.rightPosition = massY;\n  pulleyObj.ropeLeftY = massY + 15;\n  pulleyObj.ropeRightY = massY + 15;\n  \n  alert('Máquina de Atwood criada!\\n\\nMassas: 1kg cada\\nRaio da roldana: 40px\\nAtrito da corda: 0.05\\nAtrito da roldana: 0.02\\n\\nInicie a simulação para ver o movimento!');\n}"
-    },
-    {
-      "id": "reset_atwood",
-      "name": "Resetar Posições",
-      "icon": "restart_alt",
-      "category": "mechanics",
-      "action": "function() {\n  const atwoodPulley = Lab.state.objects.find(o => o.pluginId === 'atwood_pulley');\n  if (atwoodPulley) {\n    const massY = 350;\n    atwoodPulley.leftPosition = massY;\n    atwoodPulley.rightPosition = massY;\n    atwoodPulley.velocity = 0;\n    atwoodPulley.angularVelocity = 0;\n    atwoodPulley.rotationAngle = 0;\n    \n    if (atwoodPulley.leftMassObj) atwoodPulley.leftMassObj.y = massY;\n    if (atwoodPulley.rightMassObj) atwoodPulley.rightMassObj.y = massY;\n    \n    Lab.render.all();\n    alert('Posições resetadas!');\n  } else {\n    alert('Nenhuma máquina de Atwood encontrada. Crie uma primeiro.');\n  }\n}"
-    },
-    {
-      "id": "set_mass_difference",
-      "name": "Diferença de Massa",
-      "icon": "balance",
-      "category": "mechanics",
-      "action": "function() {\n  const atwoodPulley = Lab.state.objects.find(o => o.pluginId === 'atwood_pulley');\n  if (atwoodPulley) {\n    const m1 = parseFloat(prompt('Massa esquerda (kg):', atwoodPulley.leftMass || 1));\n    const m2 = parseFloat(prompt('Massa direita (kg):', atwoodPulley.rightMass || 1));\n    \n    if (!isNaN(m1) && !isNaN(m2) && m1 > 0 && m2 > 0) {\n      atwoodPulley.leftMass = m1;\n      atwoodPulley.rightMass = m2;\n      if (atwoodPulley.leftMassObj) atwoodPulley.leftMassObj.mass = m1;\n      if (atwoodPulley.rightMassObj) atwoodPulley.rightMassObj.mass = m2;\n      \n      const diff = Math.abs(m1 - m2);\n      const acceleration = (diff * 9.8) / (m1 + m2 + (atwoodPulley.momentOfInertia / Math.pow(atwoodPulley.w/100, 2)));\n      \n      alert(`Massas ajustadas!\\n\\nEsquerda: ${m1} kg\\nDireita: ${m2} kg\\nDiferença: ${diff} kg\\nAceleração teórica: ${acceleration.toFixed(2)} m/s²\\n\\nInicie a simulação para ver o movimento.`);\n    }\n  } else {\n    alert('Nenhuma máquina de Atwood encontrada. Crie uma primeiro.');\n  }\n}"
-    },
-    {
-      "id": "set_friction",
-      "name": "Ajustar Atritos",
-      "icon": "tune",
-      "category": "mechanics",
-      "action": "function() {\n  const atwoodPulley = Lab.state.objects.find(o => o.pluginId === 'atwood_pulley');\n  if (atwoodPulley) {\n    const ropeFriction = parseFloat(prompt('Atrito da corda (0-0.3):', atwoodPulley.friction || 0.05));\n    const pulleyFriction = parseFloat(prompt('Atrito da roldana (0-0.2):', atwoodPulley.ropeFriction || 0.02));\n    \n    if (!isNaN(ropeFriction) && !isNaN(pulleyFriction)) {\n      atwoodPulley.friction = Math.max(0, Math.min(0.3, ropeFriction));\n      atwoodPulley.ropeFriction = Math.max(0, Math.min(0.2, pulleyFriction));\n      alert(`Atritos ajustados!\\n\\nAtrito da corda: ${atwoodPulley.friction}\\nAtrito da roldana: ${atwoodPulley.ropeFriction}`);\n    }\n  } else {\n    alert('Nenhuma máquina de Atwood encontrada. Crie uma primeiro.');\n  }\n}"
-    }
-  ],
-  "simulations": [
-    {
-      "id": "atwood_simulation",
-      "name": "Simular Atwood",
-      "description": "Simula o movimento real da máquina de Atwood com inércia da roldana e atritos",
-      "icon": "play_circle",
-      "setup": "function() {\n  const atwoodPulley = Lab.state.objects.find(o => o.pluginId === 'atwood_pulley');\n  if (atwoodPulley) {\n    atwoodPulley.velocity = 0;\n    atwoodPulley.angularVelocity = 0;\n    alert('Simulação da Máquina de Atwood pronta!\\n\\nParâmetros atuais:\\n' +\n      `Massa esquerda: ${atwoodPulley.leftMass} kg\\n` +\n      `Massa direita: ${atwoodPulley.rightMass} kg\\n` +\n      `Inércia da roldana: ${atwoodPulley.momentOfInertia}\\n` +\n      `Atrito da corda: ${atwoodPulley.friction}\\n` +\n      `Atrito da roldana: ${atwoodPulley.ropeFriction}\\n\\n` +\n      `Clique em Iniciar Simulação para ver o movimento!`);\n  }\n}",
-      "update": "function(dt) {\n  const atwoodPulley = Lab.state.objects.find(o => o.pluginId === 'atwood_pulley');\n  if (!atwoodPulley) return;\n  \n  const m1 = atwoodPulley.leftMass;\n  const m2 = atwoodPulley.rightMass;\n  const I = atwoodPulley.momentOfInertia;\n  const r = atwoodPulley.w / 100;\n  const g = Lab.state.gravity;\n  const friction = atwoodPulley.friction;\n  const ropeFriction = atwoodPulley.ropeFriction;\n  \n  // Aceleração teórica\n  const denominator = m1 + m2 + I / (r * r);\n  let a = (m2 - m1) * g / denominator;\n  \n  // Atrito da corda\n  if (atwoodPulley.velocity) {\n    const frictionForce = friction * (m1 + m2) * g;\n    const frictionAcc = frictionForce / denominator;\n    if (a > 0) a = Math.max(0, a - frictionAcc);\n    else if (a < 0) a = Math.min(0, a + frictionAcc);\n  }\n  \n  // Atrito da roldana\n  const angularFriction = (atwoodPulley.angularVelocity || 0) * ropeFriction;\n  \n  // Atualizar velocidades\n  atwoodPulley.velocity = (atwoodPulley.velocity || 0) + a * dt;\n  atwoodPulley.velocity *= (1 - friction * dt);\n  \n  // Velocidade angular\n  atwoodPulley.angularVelocity = (atwoodPulley.velocity / r) * dt + (atwoodPulley.angularVelocity || 0);\n  atwoodPulley.angularVelocity *= (1 - angularFriction * dt);\n  atwoodPulley.rotationAngle = (atwoodPulley.rotationAngle || 0) + atwoodPulley.angularVelocity * dt * 30;\n  \n  // Atualizar posições\n  atwoodPulley.leftPosition = (atwoodPulley.leftPosition || 350) - atwoodPulley.velocity * dt;\n  atwoodPulley.rightPosition = (atwoodPulley.rightPosition || 350) + atwoodPulley.velocity * dt;\n  \n  // Limites\n  const minY = 100;\n  const maxY = 550;\n  atwoodPulley.leftPosition = Math.max(minY, Math.min(maxY, atwoodPulley.leftPosition));\n  atwoodPulley.rightPosition = Math.max(minY, Math.min(maxY, atwoodPulley.rightPosition));\n  \n  // Atualizar objetos das massas\n  if (atwoodPulley.leftMassObj) {\n    atwoodPulley.leftMassObj.y = atwoodPulley.leftPosition;\n  }\n  if (atwoodPulley.rightMassObj) {\n    atwoodPulley.rightMassObj.y = atwoodPulley.rightPosition;\n  }\n  \n  atwoodPulley.ropeLeftY = atwoodPulley.leftPosition + 15;\n  atwoodPulley.ropeRightY = atwoodPulley.rightPosition + 15;\n}",
-      "cleanup": "function() {\n  console.log('Simulação da Máquina de Atwood finalizada');\n}"
+      "id": "create_atwood",
+      "name": "Criar Sistema",
+      "action": "function() {\n\
+        const cx = Lab.state.W / 2;\n\
+\n\
+        const pulleyId = Lab.objects.add({\n\
+          type: 'shape',\n\
+          pluginId: 'atwood_pulley',\n\
+          x: cx,\n\
+          y: 150\n\
+        });\n\
+\n\
+        const leftId = Lab.objects.add({\n\
+          type: 'shape',\n\
+          pluginId: 'atwood_mass',\n\
+          x: cx - 40,\n\
+          y: 350,\n\
+          mass: 1\n\
+        });\n\
+\n\
+        const rightId = Lab.objects.add({\n\
+          type: 'shape',\n\
+          pluginId: 'atwood_mass',\n\
+          x: cx + 40,\n\
+          y: 350,\n\
+          mass: 2,\n\
+          fill: '#ef4444'\n\
+        });\n\
+\n\
+        const pulley = Lab.objects.get(pulleyId);\n\
+        pulley.leftMassObj = Lab.objects.get(leftId);\n\
+        pulley.rightMassObj = Lab.objects.get(rightId);\n\
+\n\
+        alert('Sistema criado com corda conectada!');\n\
+      }"
     }
   ]
 }
