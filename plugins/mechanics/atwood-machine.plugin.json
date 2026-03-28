@@ -26,103 +26,9 @@
         "rotationAngle": 0
       },
 
-      "draw": "function(ctx, obj) {\n\
-        ctx.save();\n\
-\n\
-        // === ROLDANA (com rotação) ===\n\
-        ctx.translate(obj.x, obj.y);\n\
-        ctx.rotate(obj.rotationAngle || 0);\n\
-        ctx.translate(-obj.x, -obj.y);\n\
-\n\
-        ctx.beginPath();\n\
-        ctx.arc(obj.x, obj.y, obj.w, 0, Math.PI * 2);\n\
-        ctx.fillStyle = '#cbd5e1';\n\
-        ctx.fill();\n\
-        ctx.strokeStyle = '#475569';\n\
-        ctx.lineWidth = 2;\n\
-        ctx.stroke();\n\
-\n\
-        ctx.beginPath();\n\
-        ctx.arc(obj.x, obj.y, obj.w - 5, 0, Math.PI * 2);\n\
-        ctx.fillStyle = '#1e293b';\n\
-        ctx.fill();\n\
-\n\
-        ctx.restore();\n\
-\n\
-        // === CORDA (SEM rotação) ===\n\
-        if (!obj.leftMassObj || !obj.rightMassObj) return;\n\
-\n\
-        const left = obj.leftMassObj;\n\
-        const right = obj.rightMassObj;\n\
-\n\
-        const leftTop = left.y - left.w;\n\
-        const rightTop = right.y - right.w;\n\
-\n\
-        const leftX = obj.x - obj.w;\n\
-        const rightX = obj.x + obj.w;\n\
-\n\
-        ctx.beginPath();\n\
-\n\
-        // lado esquerdo\n\
-        ctx.moveTo(leftX, obj.y);\n\
-        ctx.lineTo(leftX, leftTop);\n\
-\n\
-        // conexão massa esquerda\n\
-        ctx.lineTo(left.x, leftTop);\n\
-\n\
-        // lado direito\n\
-        ctx.moveTo(rightX, obj.y);\n\
-        ctx.lineTo(rightX, rightTop);\n\
-\n\
-        // conexão massa direita\n\
-        ctx.lineTo(right.x, rightTop);\n\
-\n\
-        ctx.strokeStyle = obj.ropeColor;\n\
-        ctx.lineWidth = obj.ropeWidth;\n\
-        ctx.lineCap = 'round';\n\
-        ctx.stroke();\n\
-      }",
+      "draw": "function(ctx, obj) {\nctx.save();\n\n// ROLDANA\nctx.translate(obj.x, obj.y);\nctx.rotate(obj.rotationAngle || 0);\nctx.translate(-obj.x, -obj.y);\n\nctx.beginPath();\nctx.arc(obj.x, obj.y, obj.w, 0, Math.PI * 2);\nctx.fillStyle = '#cbd5e1';\nctx.fill();\nctx.strokeStyle = '#475569';\nctx.lineWidth = 2;\nctx.stroke();\n\nctx.beginPath();\nctx.arc(obj.x, obj.y, obj.w - 5, 0, Math.PI * 2);\nctx.fillStyle = '#1e293b';\nctx.fill();\n\nctx.restore();\n\n// CORDA\nif (!obj.leftMassObj || !obj.rightMassObj) return;\n\nconst left = obj.leftMassObj;\nconst right = obj.rightMassObj;\n\nconst leftTop = left.y - left.w;\nconst rightTop = right.y - right.w;\n\nconst leftX = obj.x - obj.w;\nconst rightX = obj.x + obj.w;\n\nctx.beginPath();\n\nctx.moveTo(leftX, obj.y);\nctx.lineTo(leftX, leftTop);\nctx.lineTo(left.x, leftTop);\n\nctx.moveTo(rightX, obj.y);\nctx.lineTo(rightX, rightTop);\nctx.lineTo(right.x, rightTop);\n\nctx.strokeStyle = obj.ropeColor;\nctx.lineWidth = obj.ropeWidth;\nctx.lineCap = 'round';\nctx.stroke();\n}",
 
-      "update": "function(obj, dt) {\n\
-        if (!obj.leftMassObj || !obj.rightMassObj) return;\n\
-\n\
-        const m1 = obj.leftMassObj.mass;\n\
-        const m2 = obj.rightMassObj.mass;\n\
-        const g = Lab.state.gravity;\n\
-        const r = obj.w / 100;\n\
-        const I = obj.momentOfInertia;\n\
-\n\
-        const denom = m1 + m2 + I/(r*r);\n\
-        let a = (m2 - m1) * g / denom;\n\
-\n\
-        // atrito\n\
-        if (Math.abs(obj.velocity) > 0.01) {\n\
-          const f = obj.friction * (m1 + m2) * g;\n\
-          const af = f / denom;\n\
-          if (a > 0) a = Math.max(0, a - af);\n\
-          else a = Math.min(0, a + af);\n\
-        }\n\
-\n\
-        obj.velocity += a * dt;\n\
-        obj.velocity *= (1 - obj.friction * dt);\n\
-\n\
-        obj.angularVelocity += (a / r) * dt;\n\
-        obj.angularVelocity *= (1 - obj.ropeFriction * dt);\n\
-\n\
-        obj.rotationAngle += obj.angularVelocity * dt * 30;\n\
-\n\
-        obj.leftPosition -= obj.velocity * dt;\n\
-        obj.rightPosition += obj.velocity * dt;\n\
-\n\
-        const minY = 100;\n\
-        const maxY = 600;\n\
-\n\
-        obj.leftPosition = Math.max(minY, Math.min(maxY, obj.leftPosition));\n\
-        obj.rightPosition = Math.max(minY, Math.min(maxY, obj.rightPosition));\n\
-\n\
-        obj.leftMassObj.y = obj.leftPosition;\n\
-        obj.rightMassObj.y = obj.rightPosition;\n\
-      }"
+      "update": "function(obj, dt) {\nif (!obj.leftMassObj || !obj.rightMassObj) return;\n\nconst m1 = obj.leftMassObj.mass;\nconst m2 = obj.rightMassObj.mass;\nconst g = Lab.state.gravity;\nconst r = obj.w / 100;\nconst I = obj.momentOfInertia;\n\nconst denom = m1 + m2 + I/(r*r);\nlet a = (m2 - m1) * g / denom;\n\nif (Math.abs(obj.velocity) > 0.01) {\nconst f = obj.friction * (m1 + m2) * g;\nconst af = f / denom;\nif (a > 0) a = Math.max(0, a - af);\nelse a = Math.min(0, a + af);\n}\n\nobj.velocity += a * dt;\nobj.velocity *= (1 - obj.friction * dt);\n\nobj.angularVelocity += (a / r) * dt;\nobj.angularVelocity *= (1 - obj.ropeFriction * dt);\n\nobj.rotationAngle += obj.angularVelocity * dt * 30;\n\nobj.leftPosition -= obj.velocity * dt;\nobj.rightPosition += obj.velocity * dt;\n\nconst minY = 100;\nconst maxY = 600;\n\nobj.leftPosition = Math.max(minY, Math.min(maxY, obj.leftPosition));\nobj.rightPosition = Math.max(minY, Math.min(maxY, obj.rightPosition));\n\nobj.leftMassObj.y = obj.leftPosition;\nobj.rightMassObj.y = obj.rightPosition;\n}"
     },
 
     {
@@ -135,26 +41,7 @@
         "fill": "#3b82f6"
       },
 
-      "draw": "function(ctx, obj) {\n\
-        ctx.save();\n\
-\n\
-        ctx.beginPath();\n\
-        ctx.arc(obj.x, obj.y, obj.w, 0, Math.PI * 2);\n\
-        ctx.fillStyle = obj.fill;\n\
-        ctx.fill();\n\
-\n\
-        // gancho\n\
-        ctx.beginPath();\n\
-        ctx.moveTo(obj.x, obj.y - obj.w);\n\
-        ctx.lineTo(obj.x, obj.y - obj.w - 10);\n\
-        ctx.stroke();\n\
-\n\
-        ctx.fillStyle = '#fff';\n\
-        ctx.font = '12px monospace';\n\
-        ctx.fillText(obj.mass + 'kg', obj.x - 14, obj.y + 4);\n\
-\n\
-        ctx.restore();\n\
-      }"
+      "draw": "function(ctx, obj) {\nctx.save();\n\nctx.beginPath();\nctx.arc(obj.x, obj.y, obj.w, 0, Math.PI * 2);\nctx.fillStyle = obj.fill;\nctx.fill();\n\nctx.beginPath();\nctx.moveTo(obj.x, obj.y - obj.w);\nctx.lineTo(obj.x, obj.y - obj.w - 10);\nctx.stroke();\n\nctx.fillStyle = '#fff';\nctx.font = '12px monospace';\nctx.fillText(obj.mass + 'kg', obj.x - 14, obj.y + 4);\n\nctx.restore();\n}"
     }
   ],
 
@@ -162,37 +49,7 @@
     {
       "id": "create_atwood",
       "name": "Criar Máquina",
-      "action": "function() {\n\
-        const cx = Lab.state.W / 2;\n\
-\n\
-        const pulleyId = Lab.objects.add({\n\
-          type: 'shape',\n\
-          pluginId: 'atwood_pulley',\n\
-          x: cx,\n\
-          y: 150\n\
-        });\n\
-\n\
-        const leftId = Lab.objects.add({\n\
-          type: 'shape',\n\
-          pluginId: 'atwood_mass',\n\
-          x: cx - 60,\n\
-          y: 450,\n\
-          mass: 1\n\
-        });\n\
-\n\
-        const rightId = Lab.objects.add({\n\
-          type: 'shape',\n\
-          pluginId: 'atwood_mass',\n\
-          x: cx + 60,\n\
-          y: 450,\n\
-          mass: 1.5,\n\
-          fill: '#ef4444'\n\
-        });\n\
-\n\
-        const pulley = Lab.objects.get(pulleyId);\n\
-        pulley.leftMassObj = Lab.objects.get(leftId);\n\
-        pulley.rightMassObj = Lab.objects.get(rightId);\n\
-      }"
+      "action": "function() {\nconst cx = Lab.state.W / 2;\n\nconst pulleyId = Lab.objects.add({\ntype: 'shape',\npluginId: 'atwood_pulley',\nx: cx,\ny: 150\n});\n\nconst leftId = Lab.objects.add({\ntype: 'shape',\npluginId: 'atwood_mass',\nx: cx - 60,\ny: 450,\nmass: 1\n});\n\nconst rightId = Lab.objects.add({\ntype: 'shape',\npluginId: 'atwood_mass',\nx: cx + 60,\ny: 450,\nmass: 1.5,\nfill: '#ef4444'\n});\n\nconst pulley = Lab.objects.get(pulleyId);\npulley.leftMassObj = Lab.objects.get(leftId);\npulley.rightMassObj = Lab.objects.get(rightId);\n}"
     }
   ]
 }
