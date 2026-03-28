@@ -1,0 +1,73 @@
+{
+  "name": "Campo Magnético",
+  "version": "1.0.0",
+  "author": "Physics Lab Team",
+  "description": "Adiciona ferramentas para simulação de campo magnético de ímãs e correntes",
+  "category": "electro",
+  "scripts": [],
+  "styles": [],
+  "objects": [
+    {
+      "id": "magnet",
+      "name": "Ímã",
+      "icon": "magnet",
+      "type": "shape",
+      "defaultProps": {
+        "w": 60,
+        "h": 30,
+        "strength": 100,
+        "polarity": "N-S",
+        "mass": 2,
+        "fill": "#ef4444",
+        "stroke": "#dc2626"
+      },
+      "draw": "function(ctx, obj) {\n  ctx.save();\n  if (obj.angle) {\n    const c = Lab.utils.getCenter(obj);\n    ctx.translate(c.x, c.y);\n    ctx.rotate(obj.angle * Math.PI / 180);\n    ctx.translate(-c.x, -c.y);\n  }\n  \n  ctx.fillStyle = obj.fill;\n  ctx.fillRect(obj.x, obj.y, obj.w, obj.h);\n  \n  ctx.fillStyle = '#ffffff';\n  ctx.font = 'bold 12px monospace';\n  ctx.fillText('N', obj.x + 5, obj.y + obj.h/2 + 4);\n  ctx.fillText('S', obj.x + obj.w - 15, obj.y + obj.h/2 + 4);\n  \n  ctx.restore();\n}",
+      "update": "function(obj, dt) {\n  // Magnetic field influence on charged particles\n  for (const other of Lab.state.objects) {\n    if (other.charge && other.charge !== 0) {\n      const center = Lab.utils.getCenter(obj);\n      const otherCenter = Lab.utils.getCenter(other);\n      const dx = otherCenter.x - center.x;\n      const dy = otherCenter.y - center.y;\n      const r = Math.hypot(dx, dy);\n      \n      if (r > 5 && r < 200) {\n        const B = obj.strength / (r * r);\n        const forceX = -other.charge * B * dy;\n        const forceY = other.charge * B * dx;\n        \n        other.vx += forceX * dt / (other.mass || 1);\n        other.vy += forceY * dt / (other.mass || 1);\n      }\n    }\n  }\n}",
+      "properties": [
+        { "name": "strength", "label": "Força do Campo", "type": "number", "default": 100, "min": 0, "max": 500 },
+        { "name": "mass", "label": "Massa (kg)", "type": "number", "default": 2 },
+        { "name": "fill", "label": "Cor", "type": "color", "default": "#ef4444" }
+      ]
+    },
+    {
+      "id": "current_wire",
+      "name": "Fio com Corrente",
+      "icon": "bolt",
+      "type": "shape",
+      "defaultProps": {
+        "w": 80,
+        "h": 8,
+        "current": 5,
+        "mass": 1,
+        "fill": "#fbbf24",
+        "stroke": "#d97706"
+      },
+      "draw": "function(ctx, obj) {\n  ctx.fillStyle = obj.fill;\n  ctx.fillRect(obj.x, obj.y, obj.w, obj.h);\n  ctx.strokeStyle = obj.stroke;\n  ctx.lineWidth = 1;\n  ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);\n  \n  ctx.fillStyle = '#000000';\n  ctx.font = '10px monospace';\n  ctx.fillText(`${obj.current}A`, obj.x + obj.w/2 - 10, obj.y - 5);\n}",
+      "update": "function(obj, dt) {\n  // Magnetic field from current-carrying wire\n  for (const other of Lab.state.objects) {\n    if (other.charge && other.charge !== 0 && !other.static) {\n      const center = Lab.utils.getCenter(obj);\n      const otherCenter = Lab.utils.getCenter(other);\n      const dx = otherCenter.x - center.x;\n      const dy = otherCenter.y - center.y;\n      const r = Math.hypot(dx, dy);\n      \n      if (r > 5 && r < 150) {\n        const B = (obj.current * 2e-7) / r;\n        const forceX = -other.charge * B * dy;\n        const forceY = other.charge * B * dx;\n        \n        other.vx += forceX * dt / (other.mass || 1);\n        other.vy += forceY * dt / (other.mass || 1);\n      }\n    }\n  }\n}",
+      "properties": [
+        { "name": "current", "label": "Corrente (A)", "type": "number", "default": 5, "min": 0, "max": 20 },
+        { "name": "fill", "label": "Cor", "type": "color", "default": "#fbbf24" }
+      ]
+    }
+  ],
+  "tools": [
+    {
+      "id": "show_field_lines",
+      "name": "Mostrar Linhas de Campo",
+      "icon": "timeline",
+      "category": "electro",
+      "action": "function() {\n  Lab.state.showMagneticField = !Lab.state.showMagneticField;\n  Lab.render.all();\n}"
+    }
+  ],
+  "simulations": [
+    {
+      "id": "charged_particle_motion",
+      "name": "Partícula em Campo Magnético",
+      "description": "Simula o movimento de uma partícula carregada em campo magnético uniforme",
+      "icon": "circle",
+      "setup": "function() {\n  Lab.state.objects.push({\n    id: Lab.state.nextId++,\n    type: 'circle',\n    x: Lab.state.W/2,\n    y: Lab.state.H/2,\n    w: 15,\n    charge: 1,\n    mass: 0.5,\n    vx: 50,\n    vy: 0,\n    fill: '#3b82f6',\n    stroke: '#1d4ed8'\n  });\n  Lab.state.magneticField = { x: 0, y: 0, z: 10 };\n  Lab.render.all();\n}",
+      "update": "function(dt) {\n  if (!Lab.state.magneticField) return;\n  \n  for (const obj of Lab.state.objects) {\n    if (obj.charge && obj.charge !== 0 && !obj.static) {\n      const Bz = Lab.state.magneticField.z;\n      const fx = obj.charge * obj.vy * Bz;\n      const fy = -obj.charge * obj.vx * Bz;\n      \n      obj.vx += fx * dt / (obj.mass || 1);\n      obj.vy += fy * dt / (obj.mass || 1);\n    }\n  }\n}",
+      "cleanup": "function() {\n  Lab.state.magneticField = null;\n}"
+    }
+  ]
+}
