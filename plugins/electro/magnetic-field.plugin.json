@@ -2,31 +2,33 @@
   "name": "Campo Magnético",
   "version": "1.0.0",
   "author": "Physics Lab Team",
-  "description": "Adiciona ferramentas para simulação de campo magnético de ímãs e correntes",
+  "description": "Adiciona ímãs e fios com corrente como objetos nativos na categoria Eletromagnetismo",
   "category": "electro",
-  "scripts": [],
-  "styles": [],
   "objects": [
     {
       "id": "magnet",
       "name": "Ímã",
       "icon": "magnet",
       "type": "shape",
+      "category": "electro",
       "defaultProps": {
         "w": 60,
         "h": 30,
         "strength": 100,
-        "polarity": "N-S",
         "mass": 2,
         "fill": "#ef4444",
-        "stroke": "#dc2626"
+        "stroke": "#dc2626",
+        "lineWidth": 2,
+        "static": true,
+        "collidable": true
       },
-      "draw": "function(ctx, obj) {\n  ctx.save();\n  if (obj.angle) {\n    const c = Lab.utils.getCenter(obj);\n    ctx.translate(c.x, c.y);\n    ctx.rotate(obj.angle * Math.PI / 180);\n    ctx.translate(-c.x, -c.y);\n  }\n  \n  ctx.fillStyle = obj.fill;\n  ctx.fillRect(obj.x, obj.y, obj.w, obj.h);\n  \n  ctx.fillStyle = '#ffffff';\n  ctx.font = 'bold 12px monospace';\n  ctx.fillText('N', obj.x + 5, obj.y + obj.h/2 + 4);\n  ctx.fillText('S', obj.x + obj.w - 15, obj.y + obj.h/2 + 4);\n  \n  ctx.restore();\n}",
-      "update": "function(obj, dt) {\n  // Magnetic field influence on charged particles\n  for (const other of Lab.state.objects) {\n    if (other.charge && other.charge !== 0) {\n      const center = Lab.utils.getCenter(obj);\n      const otherCenter = Lab.utils.getCenter(other);\n      const dx = otherCenter.x - center.x;\n      const dy = otherCenter.y - center.y;\n      const r = Math.hypot(dx, dy);\n      \n      if (r > 5 && r < 200) {\n        const B = obj.strength / (r * r);\n        const forceX = -other.charge * B * dy;\n        const forceY = other.charge * B * dx;\n        \n        other.vx += forceX * dt / (other.mass || 1);\n        other.vy += forceY * dt / (other.mass || 1);\n      }\n    }\n  }\n}",
+      "draw": "function(ctx, obj) {\n  ctx.save();\n  \n  // Aplicar rotação\n  if (obj.angle) {\n    const c = Lab.utils.getCenter(obj);\n    ctx.translate(c.x, c.y);\n    ctx.rotate(obj.angle * Math.PI / 180);\n    ctx.translate(-c.x, -c.y);\n  }\n  \n  // Corpo do ímã\n  ctx.fillStyle = obj.fill;\n  ctx.fillRect(obj.x, obj.y, obj.w, obj.h);\n  ctx.strokeStyle = obj.stroke;\n  ctx.lineWidth = obj.lineWidth || 2;\n  ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);\n  \n  // Polos N e S\n  ctx.fillStyle = '#ffffff';\n  ctx.font = `bold ${Math.max(12, obj.h / 2)}px monospace`;\n  ctx.fillText('N', obj.x + 8, obj.y + obj.h/2 + 5);\n  ctx.fillText('S', obj.x + obj.w - 18, obj.y + obj.h/2 + 5);\n  \n  // Linhas de campo magnético (efeito visual)\n  if (Lab.state.showMagneticField) {\n    ctx.beginPath();\n    ctx.strokeStyle = 'rgba(108, 99, 255, 0.4)';\n    ctx.lineWidth = 1.5;\n    ctx.setLineDash([5, 5]);\n    \n    const center = Lab.utils.getCenter(obj);\n    const radius = Math.max(obj.w, obj.h) / 2;\n    \n    for (let i = 0; i < 8; i++) {\n      const angle = (i / 8) * Math.PI * 2;\n      const startX = center.x + Math.cos(angle) * radius;\n      const startY = center.y + Math.sin(angle) * radius;\n      const endX = center.x + Math.cos(angle) * (radius + 40);\n      const endY = center.y + Math.sin(angle) * (radius + 40);\n      \n      ctx.beginPath();\n      ctx.moveTo(startX, startY);\n      ctx.quadraticCurveTo(\n        center.x + Math.cos(angle + 0.5) * (radius + 20),\n        center.y + Math.sin(angle + 0.5) * (radius + 20),\n        endX, endY\n      );\n      ctx.stroke();\n    }\n    ctx.setLineDash([]);\n  }\n  \n  ctx.restore();\n}",
+      "update": "function(obj, dt) {\n  if (!Lab.state.isSimulating) return;\n  \n  const center = Lab.utils.getCenter(obj);\n  \n  for (const other of Lab.state.objects) {\n    if (other.id === obj.id) continue;\n    if (!other.charge || other.charge === 0) continue;\n    if (other.static) continue;\n    \n    const otherCenter = Lab.utils.getCenter(other);\n    const dx = otherCenter.x - center.x;\n    const dy = otherCenter.y - center.y;\n    const r = Math.hypot(dx, dy);\n    \n    if (r > 8 && r < 200) {\n      const B = obj.strength / Math.max(r * r, 25);\n      \n      // Força de Lorentz: F = q * v × B\n      const forceX = -other.charge * B * dy;\n      const forceY = other.charge * B * dx;\n      \n      other.vx = (other.vx || 0) + forceX * dt / (other.mass || 1);\n      other.vy = (other.vy || 0) + forceY * dt / (other.mass || 1);\n    }\n  }\n}",
       "properties": [
-        { "name": "strength", "label": "Força do Campo", "type": "number", "default": 100, "min": 0, "max": 500 },
-        { "name": "mass", "label": "Massa (kg)", "type": "number", "default": 2 },
-        { "name": "fill", "label": "Cor", "type": "color", "default": "#ef4444" }
+        { "name": "strength", "label": "Força do Campo", "type": "range", "default": 100, "min": 0, "max": 500, "step": 10 },
+        { "name": "mass", "label": "Massa (kg)", "type": "number", "default": 2, "min": 0.1, "max": 100 },
+        { "name": "fill", "label": "Cor", "type": "color", "default": "#ef4444" },
+        { "name": "static", "label": "Estático", "type": "boolean", "default": true }
       ]
     },
     {
@@ -34,40 +36,48 @@
       "name": "Fio com Corrente",
       "icon": "bolt",
       "type": "shape",
+      "category": "electro",
       "defaultProps": {
         "w": 80,
         "h": 8,
         "current": 5,
         "mass": 1,
         "fill": "#fbbf24",
-        "stroke": "#d97706"
+        "stroke": "#d97706",
+        "lineWidth": 2,
+        "static": true,
+        "collidable": true
       },
-      "draw": "function(ctx, obj) {\n  ctx.fillStyle = obj.fill;\n  ctx.fillRect(obj.x, obj.y, obj.w, obj.h);\n  ctx.strokeStyle = obj.stroke;\n  ctx.lineWidth = 1;\n  ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);\n  \n  ctx.fillStyle = '#000000';\n  ctx.font = '10px monospace';\n  ctx.fillText(`${obj.current}A`, obj.x + obj.w/2 - 10, obj.y - 5);\n}",
-      "update": "function(obj, dt) {\n  // Magnetic field from current-carrying wire\n  for (const other of Lab.state.objects) {\n    if (other.charge && other.charge !== 0 && !other.static) {\n      const center = Lab.utils.getCenter(obj);\n      const otherCenter = Lab.utils.getCenter(other);\n      const dx = otherCenter.x - center.x;\n      const dy = otherCenter.y - center.y;\n      const r = Math.hypot(dx, dy);\n      \n      if (r > 5 && r < 150) {\n        const B = (obj.current * 2e-7) / r;\n        const forceX = -other.charge * B * dy;\n        const forceY = other.charge * B * dx;\n        \n        other.vx += forceX * dt / (other.mass || 1);\n        other.vy += forceY * dt / (other.mass || 1);\n      }\n    }\n  }\n}",
+      "draw": "function(ctx, obj) {\n  ctx.save();\n  \n  if (obj.angle) {\n    const c = Lab.utils.getCenter(obj);\n    ctx.translate(c.x, c.y);\n    ctx.rotate(obj.angle * Math.PI / 180);\n    ctx.translate(-c.x, -c.y);\n  }\n  \n  // Corpo do fio\n  ctx.fillStyle = obj.fill;\n  ctx.fillRect(obj.x, obj.y, obj.w, obj.h);\n  ctx.strokeStyle = obj.stroke;\n  ctx.lineWidth = obj.lineWidth || 1;\n  ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);\n  \n  // Corrente (linhas tracejadas)\n  ctx.beginPath();\n  ctx.strokeStyle = '#000000';\n  ctx.lineWidth = 1.5;\n  ctx.setLineDash([4, 4]);\n  for (let i = 1; i <= 3; i++) {\n    const yPos = obj.y + obj.h / 2;\n    const xStart = obj.x + i * obj.w / 4;\n    ctx.beginPath();\n    ctx.moveTo(xStart - 8, yPos);\n    ctx.lineTo(xStart, yPos - 4);\n    ctx.lineTo(xStart, yPos + 4);\n    ctx.closePath();\n    ctx.fillStyle = '#000000';\n    ctx.fill();\n  }\n  ctx.setLineDash([]);\n  \n  // Texto da corrente\n  ctx.fillStyle = '#000000';\n  ctx.font = 'bold 10px monospace';\n  ctx.fillText(`${obj.current}A`, obj.x + obj.w/2 - 8, obj.y - 5);\n  \n  // Linhas de campo (efeito visual)\n  if (Lab.state.showMagneticField) {\n    const center = Lab.utils.getCenter(obj);\n    ctx.beginPath();\n    ctx.strokeStyle = 'rgba(108, 99, 255, 0.4)';\n    ctx.lineWidth = 1;\n    ctx.setLineDash([4, 4]);\n    \n    for (let i = 0; i < 12; i++) {\n      const angle = (i / 12) * Math.PI * 2;\n      const radius = 25;\n      const x = center.x + Math.cos(angle) * radius;\n      const y = center.y + Math.sin(angle) * radius;\n      \n      ctx.beginPath();\n      ctx.arc(x, y, 3, 0, Math.PI * 2);\n      ctx.fillStyle = 'rgba(108, 99, 255, 0.2)';\n      ctx.fill();\n    }\n    ctx.setLineDash([]);\n  }\n  \n  ctx.restore();\n}",
+      "update": "function(obj, dt) {\n  if (!Lab.state.isSimulating) return;\n  \n  const center = Lab.utils.getCenter(obj);\n  \n  for (const other of Lab.state.objects) {\n    if (other.id === obj.id) continue;\n    if (!other.charge || other.charge === 0) continue;\n    if (other.static) continue;\n    \n    const otherCenter = Lab.utils.getCenter(other);\n    const dx = otherCenter.x - center.x;\n    const dy = otherCenter.y - center.y;\n    const r = Math.hypot(dx, dy);\n    \n    if (r > 5 && r < 150) {\n      // Campo magnético de um fio: B = μ0 * I / (2πr)\n      const B = (obj.current * 2e-7) / Math.max(r, 10);\n      const forceX = -other.charge * B * dy;\n      const forceY = other.charge * B * dx;\n      \n      other.vx = (other.vx || 0) + forceX * dt / (other.mass || 1);\n      other.vy = (other.vy || 0) + forceY * dt / (other.mass || 1);\n    }\n  }\n}",
       "properties": [
-        { "name": "current", "label": "Corrente (A)", "type": "number", "default": 5, "min": 0, "max": 20 },
-        { "name": "fill", "label": "Cor", "type": "color", "default": "#fbbf24" }
+        { "name": "current", "label": "Corrente (A)", "type": "range", "default": 5, "min": 0, "max": 20, "step": 0.5 },
+        { "name": "fill", "label": "Cor", "type": "color", "default": "#fbbf24" },
+        { "name": "static", "label": "Estático", "type": "boolean", "default": true }
       ]
     }
   ],
   "tools": [
     {
-      "id": "show_field_lines",
-      "name": "Mostrar Linhas de Campo",
+      "id": "toggle_field_lines",
+      "name": "Linhas de Campo",
       "icon": "timeline",
       "category": "electro",
-      "action": "function() {\n  Lab.state.showMagneticField = !Lab.state.showMagneticField;\n  Lab.render.all();\n}"
-    }
-  ],
-  "simulations": [
+      "action": "function() {\n  Lab.state.showMagneticField = !Lab.state.showMagneticField;\n  Lab.render.all();\n  alert(Lab.state.showMagneticField ? 'Linhas de campo visíveis' : 'Linhas de campo ocultas');\n}"
+    },
     {
-      "id": "charged_particle_motion",
-      "name": "Partícula em Campo Magnético",
-      "description": "Simula o movimento de uma partícula carregada em campo magnético uniforme",
-      "icon": "circle",
-      "setup": "function() {\n  Lab.state.objects.push({\n    id: Lab.state.nextId++,\n    type: 'circle',\n    x: Lab.state.W/2,\n    y: Lab.state.H/2,\n    w: 15,\n    charge: 1,\n    mass: 0.5,\n    vx: 50,\n    vy: 0,\n    fill: '#3b82f6',\n    stroke: '#1d4ed8'\n  });\n  Lab.state.magneticField = { x: 0, y: 0, z: 10 };\n  Lab.render.all();\n}",
-      "update": "function(dt) {\n  if (!Lab.state.magneticField) return;\n  \n  for (const obj of Lab.state.objects) {\n    if (obj.charge && obj.charge !== 0 && !obj.static) {\n      const Bz = Lab.state.magneticField.z;\n      const fx = obj.charge * obj.vy * Bz;\n      const fy = -obj.charge * obj.vx * Bz;\n      \n      obj.vx += fx * dt / (obj.mass || 1);\n      obj.vy += fy * dt / (obj.mass || 1);\n    }\n  }\n}",
-      "cleanup": "function() {\n  Lab.state.magneticField = null;\n}"
+      "id": "add_charged_particle",
+      "name": "Partícula +",
+      "icon": "add_circle",
+      "category": "electro",
+      "action": "function() {\n  Lab.objects.add({\n    type: 'circle',\n    x: Math.random() * (Lab.state.W - 100) + 50,\n    y: Math.random() * (Lab.state.H - 100) + 50,\n    w: 12,\n    charge: 1,\n    mass: 0.5,\n    vx: (Math.random() - 0.5) * 80,\n    vy: (Math.random() - 0.5) * 80,\n    fill: '#3b82f6',\n    stroke: '#1d4ed8',\n    lineWidth: 2\n  });\n  alert('Partícula positiva adicionada!');\n}"
+    },
+    {
+      "id": "add_negative_particle",
+      "name": "Partícula -",
+      "icon": "remove_circle",
+      "category": "electro",
+      "action": "function() {\n  Lab.objects.add({\n    type: 'circle',\n    x: Math.random() * (Lab.state.W - 100) + 50,\n    y: Math.random() * (Lab.state.H - 100) + 50,\n    w: 12,\n    charge: -1,\n    mass: 0.5,\n    vx: (Math.random() - 0.5) * 80,\n    vy: (Math.random() - 0.5) * 80,\n    fill: '#ef4444',\n    stroke: '#dc2626',\n    lineWidth: 2\n  });\n  alert('Partícula negativa adicionada!');\n}"
     }
   ]
 }
